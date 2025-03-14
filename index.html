@@ -181,9 +181,9 @@
         #game-info {
             display: flex;
             flex-direction: column;
-            flex: 0 1 auto; /* Allow shrinking but not growing */
+            flex: 1 1 auto; /* Changed from 0 1 auto to allow growing */
             overflow: hidden;
-            max-height: 30vh; /* Control maximum height */
+            max-height: 40vh; /* Increased from 30vh to 40vh */
         }
         
         #word-list-container {
@@ -191,7 +191,7 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            max-height: 30vh; /* Limit max height */
+            max-height: 40vh; /* Increased from 30vh to 40vh */
         }
         
         #word-list {
@@ -255,7 +255,7 @@
         
         .qu-text {
             display: inline-block;
-            font-size: clamp(18px, 5.5vw, 28px); /* Increased from 14px, 4vw, 24px */
+            font-size: clamp(18px, 6vw, 28px); /* Match regular letter size exactly */
             line-height: 1;
         }
         
@@ -310,7 +310,7 @@
         /* Mobile optimization */
         @media (max-height: 700px) {
             #game-info {
-                max-height: 25vh;
+                max-height: 35vh; /* Increased from 25vh to 35vh */
             }
             
             h3 {
@@ -325,7 +325,7 @@
         
         @media (max-height: 600px) {
             #game-info {
-                max-height: 20vh;
+                max-height: 30vh; /* Increased from 20vh to 30vh */
             }
         }
     </style>
