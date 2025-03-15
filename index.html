@@ -378,17 +378,30 @@
             background-color: #a33030;
             color: #ff8fae;
         }
+
+        .cell.selected.valid-flash {
+            background-color: #4CAF50; /* Green flash */
+            border-color: #45a049;
+            transition: background-color 0.05s, border-color 0.05s;
+        }
+        
+        .cell.selected.invalid-flash {
+            background-color: #f44336; /* Red flash */
+            border-color: #da190b;
+            transition: background-color 0.05s, border-color 0.05s;
+        }
     </style>
 </head>
 <body>    
     <div id="game-container">
         <div id="game-top">
             
+            <!-- Update the instructions -->
             <div id="instructions" class="game-section">
                 <h3>How to Play:</h3>
                 <ul>
                     <li>Connect letters horizontally, vertically, or diagonally</li>
-                    <li>Words must be at least 3 letters long</li>
+                    <li>Words must be at least 2 letters long</li>
                     <li>Letters can only be used once in a word</li>
                     <li>Points are based on letter scores and bonus tiles:</li>
                     <li><span class="bonus-tag dl-tag">DL</span> Double Letter | <span class="bonus-tag tl-tag">TL</span> Triple Letter</li>
@@ -613,14 +626,14 @@
                         bonusLabel.textContent = 'TW';
                         cell.appendChild(bonusLabel);
                     } 
-                    // Check if this cell is a double letter tile
+                    // Check if this cell is a double letter tile 
                     else if (isSpecialTile(i, j, 'doubleLetter')) {
                         cell.classList.add('double-letter');
                         const bonusLabel = document.createElement('span');
                         bonusLabel.className = 'letter-bonus-label';
                         bonusLabel.textContent = 'DL';
                         cell.appendChild(bonusLabel);
-                    } 
+                    }
                     // Check if this cell is a triple letter tile
                     else if (isSpecialTile(i, j, 'tripleLetter')) {
                         cell.classList.add('triple-letter');
@@ -705,7 +718,11 @@
             boardElement.addEventListener('touchend', () => {
                 // Only auto-submit if the user was dragging (touchMoved) and has enough letters
                 if (state.gameActive && touchMoved && state.selectedCells.length >= 3) {
-                    submitWord();
+                    // Force the word submission to happen after a short delay
+                    // This ensures proper touch event handling
+                    setTimeout(() => {
+                        submitWord();
+                    }, 50);
                 }
                 touchActive = false;
                 lastTouchedCell = null;
@@ -765,9 +782,9 @@
                 
                 e.preventDefault(); // Prevent scrolling while dragging
             }, { passive: false });
-        }
-        
-        // Check if a cell is a specific type of special tile
+        } // Add this closing brace
+
+        // Rest of the functions should be outside renderBoard
         function isSpecialTile(row, col, tileType) {
             return state.specialTiles[tileType].some(tile => 
                 tile.row === row && tile.col === col
@@ -921,10 +938,11 @@
             }
         }
         
-        // Submit the current word
+        // Modify the submitWord function to accept 2-letter words
         function submitWord() {
-            if (state.selectedCells.length < 3) {
-                showNotification('Words must be at least 3 letters long.');
+            if (state.selectedCells.length < 2) {  // Changed from 3 to 2
+                showNotification('Words must be at least 2 letters long.');
+                flashInvalidWord();  // Add flash for too short words
                 return;
             }
             
@@ -942,6 +960,7 @@
             // Check if the word is valid
             if (!isValidWord(lookupWord)) {
                 showNotification('Not a valid word!');
+                flashInvalidWord();
                 return;
             }
             
@@ -950,48 +969,47 @@
             if (wordIndex !== -1) {
                 // Check if this is a higher scoring version
                 if (score > state.wordScores[word]) {
-                    // Remove the old word from display
-                    const wordElements = wordListElement.querySelectorAll('.word-item');
-                    wordElements[wordIndex].remove();
-                    
-                    // Update with new score
-                    state.wordScores[word] = score;
-                    
-                    // Add the updated word to display
-                    addWordToDisplay(word, score);
-                    
-                    // Update total score
-                    scoreElement.textContent = calculateTotalScore();
-                    
-                    showNotification('Found a higher scoring version!');
+                    flashValidWord(() => {
+                        // Remove the old word from display
+                        const wordElements = wordListElement.querySelectorAll('.word-item');
+                        wordElements[wordIndex].remove();
+                        
+                        // Update with new score
+                        state.wordScores[word] = score;
+                        
+                        // Add the updated word to display
+                        addWordToDisplay(word, score);
+                        
+                        // Update total score
+                        scoreElement.textContent = calculateTotalScore();
+                        
+                        showNotification('Found a higher scoring version!');
+                    });
                 } else {
                     showNotification('You already found this word!');
+                    flashInvalidWord();
                 }
             } else {
                 // Add the word to found words
-                state.foundWords.push(word);
-                state.wordScores[word] = score;
-                
-                // Add the word to the display
-                addWordToDisplay(word, score);
-                
-                // Update stats
-                wordCountElement.textContent = state.foundWords.length;
-                scoreElement.textContent = calculateTotalScore();
-            }
-            
-            // Clear selection
-            state.selectedCells = [];
-            updateBoardSelection();
-            currentWordElement.textContent = '';
-            wordScoreElement.textContent = '';
-            
-            // Check if player has reached the target score
-            if (parseInt(scoreElement.textContent) >= state.targetScore) {
-                endGame(true);
+                flashValidWord(() => {
+                    state.foundWords.push(word);
+                    state.wordScores[word] = score;
+                    
+                    // Add the word to the display
+                    addWordToDisplay(word, score);
+                    
+                    // Update stats
+                    wordCountElement.textContent = state.foundWords.length;
+                    scoreElement.textContent = calculateTotalScore();
+                    
+                    // Check if player has reached the target score
+                    if (parseInt(scoreElement.textContent) >= state.targetScore) {
+                        endGame(true);
+                    }
+                });
             }
         }
-        
+
         // Add a word to the display
         function addWordToDisplay(word, score) {
             // Add the word to the display
@@ -1180,9 +1198,9 @@
             }
         });
 
-        // Mouse up to end selection
+        // Update the mouse up handler for 2-letter words
         document.addEventListener('mouseup', () => {
-            if (state.gameActive && isDragging && state.selectedCells.length >= 3) {
+            if (state.gameActive && isDragging && state.selectedCells.length >= 2) {  // Changed from 3 to 2
                 submitWord();
             }
             isDragging = false;
@@ -1192,6 +1210,50 @@
         document.addEventListener('mouseleave', () => {
             isDragging = false;
         });
+
+        // Add these new helper functions
+        function flashValidWord(callback) {
+            // Add valid flash class to all selected cells
+            state.selectedCells.forEach(cell => {
+                const cellElement = document.querySelector(`.cell[data-row="${cell.row}"][data-col="${cell.col}"]`);
+                if (cellElement) {
+                    cellElement.classList.add('valid-flash');
+                }
+            });
+            
+            // Wait for animation and then clear
+            setTimeout(() => {
+                state.selectedCells.forEach(cell => {
+                    const cellElement = document.querySelector(`.cell[data-row="${cell.row}"][data-col="${cell.col}"]`);
+                    if (cellElement) {
+                        cellElement.classList.remove('valid-flash');
+                    }
+                });
+                clearSelection();
+                if (callback) callback();
+            }, 100);
+        }
+
+        function flashInvalidWord() {
+            // Add invalid flash class to all selected cells
+            state.selectedCells.forEach(cell => {
+                const cellElement = document.querySelector(`.cell[data-row="${cell.row}"][data-col="${cell.col}"]`);
+                if (cellElement) {
+                    cellElement.classList.add('invalid-flash');
+                }
+            });
+            
+            // Wait for animation and then clear
+            setTimeout(() => {
+                state.selectedCells.forEach(cell => {
+                    const cellElement = document.querySelector(`.cell[data-row="${cell.row}"][data-col="${cell.col}"]`);
+                    if (cellElement) {
+                        cellElement.classList.remove('invalid-flash');
+                    }
+                });
+                clearSelection();
+            }, 100);
+        }
     </script>
 </body>
 </html>
