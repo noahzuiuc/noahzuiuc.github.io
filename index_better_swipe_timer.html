@@ -391,7 +391,6 @@
     <div id="game-container">
         <div id="game-top">
             <div id="time-remaining">Time: 3:00</div>
-            <div id="time-elapsed">Time: 0:00</div>
             
             <div id="instructions" class="game-section">
                 <h3>How to Play:</h3>
@@ -402,7 +401,7 @@
                     <li>Points are based on letter scores and bonus tiles:</li>
                     <li><span class="bonus-tag dl-tag">DL</span> Double Letter | <span class="bonus-tag tl-tag">TL</span> Triple Letter</li>
                     <li><span class="bonus-tag dw-tag">DW</span> Double Word | <span class="bonus-tag tw-tag">TW</span> Triple Word</li>
-                    <li>Reach 150 points as fast as you can</li>
+                    <li>3 minute timer</li>
                 </ul>
             </div>
             
@@ -462,8 +461,7 @@
             wordScores: {}, // Store word scores for checking higher scoring versions
             timeRemaining: 180,
             gameActive: false,
-            timer: null,
-            targetScore: 150
+            timer: null
         };
         
         // DOM elements
@@ -471,7 +469,7 @@
         const currentWordElement = document.getElementById('current-word');
         const wordScoreElement = document.getElementById('word-score');
         const wordListElement = document.getElementById('word-list');
-        const timeRemainingElement = document.getElementById('time-elapsed'); // Update this ID if you change it in HTML
+        const timeRemainingElement = document.getElementById('time-remaining');
         const wordCountElement = document.getElementById('word-count');
         const scoreElement = document.getElementById('score');
         const startButton = document.getElementById('start-btn');
@@ -877,15 +875,14 @@
             state.selectedCells = [];
             state.foundWords = [];
             state.wordScores = {};
-            state.startTime = new Date();
-            state.elapsedSeconds = 0;
+            state.timeRemaining = 180;
             state.gameActive = true;
             
             // Update UI
             wordListElement.innerHTML = '';
             wordCountElement.textContent = '0';
             scoreElement.textContent = '0';
-            timeRemainingElement.textContent = 'Time: 0:00';
+            timeRemainingElement.textContent = 'Time: 3:00';
             currentWordElement.textContent = '';
             wordScoreElement.textContent = '';
             notificationElement.textContent = '';
@@ -899,21 +896,25 @@
             submitButton.disabled = false;
             clearButton.disabled = false;
             
-            // Start timer to track elapsed time
+            // Start timer
             state.timer = setInterval(updateTimer, 1000);
         }
         
-        // Update the timer to track elapsed time
+        // Update the timer
         function updateTimer() {
-            state.elapsedSeconds++;
+            state.timeRemaining--;
             
-            const minutes = Math.floor(state.elapsedSeconds / 60);
-            const seconds = state.elapsedSeconds % 60;
+            const minutes = Math.floor(state.timeRemaining / 60);
+            const seconds = state.timeRemaining % 60;
             timeRemainingElement.textContent = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (state.timeRemaining <= 0) {
+                endGame();
+            }
         }
         
         // End the game
-        function endGame(playerWon = false) {
+        function endGame() {
             state.gameActive = false;
             clearInterval(state.timer);
             
@@ -927,13 +928,7 @@
             updateBoardSelection();
             currentWordElement.textContent = '';
             wordScoreElement.textContent = '';
-            
-            if (playerWon) {
-                // Show victory message with time
-                const minutes = Math.floor(state.elapsedSeconds / 60);
-                const seconds = state.elapsedSeconds % 60;
-                timeRemainingElement.textContent = `Victory! Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-            }
+            timeRemainingElement.textContent = 'Time\'s up!';
         }
         
         // Submit the current word
@@ -1000,11 +995,6 @@
             updateBoardSelection();
             currentWordElement.textContent = '';
             wordScoreElement.textContent = '';
-            
-            // Check if player has reached the target score
-            if (parseInt(scoreElement.textContent) >= state.targetScore) {
-                endGame(true);
-            }
         }
         
         // Add a word to the display
