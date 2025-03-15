@@ -941,9 +941,9 @@
         
         // Modify the submitWord function to accept 2-letter words
         function submitWord() {
-            if (state.selectedCells.length < 2) {  // Changed from 3 to 2
+            if (state.selectedCells.length < 2) {
                 showNotification('Words must be at least 2 letters long.');
-                flashInvalidWord();  // Add flash for too short words
+                flashInvalidWord();
                 return;
             }
             
@@ -965,20 +965,27 @@
                 return;
             }
             
-            // Check if we already found this word
-            const wordIndex = state.foundWords.indexOf(word);
-            if (wordIndex !== -1) {
+            // Check if we already found this word (case-insensitive comparison)
+            const existingWordIndex = state.foundWords.findIndex(
+                foundWord => foundWord.toLowerCase() === word.toLowerCase()
+            );
+            
+            if (existingWordIndex !== -1) {
                 // Check if this is a higher scoring version
-                if (score > state.wordScores[word]) {
+                if (score > state.wordScores[state.foundWords[existingWordIndex]]) {
                     flashValidWord(() => {
-                        // Remove the old word from display
+                        // Remove the old word and its score
+                        const oldWord = state.foundWords[existingWordIndex];
+                        state.foundWords.splice(existingWordIndex, 1);
+                        delete state.wordScores[oldWord];
+                        
+                        // Update the display
                         const wordElements = wordListElement.querySelectorAll('.word-item');
-                        wordElements[wordIndex].remove();
+                        wordElements[existingWordIndex].remove();
                         
-                        // Update with new score
+                        // Add the new version
+                        state.foundWords.push(word);
                         state.wordScores[word] = score;
-                        
-                        // Add the updated word to display
                         addWordToDisplay(word, score);
                         
                         // Update total score
@@ -991,7 +998,7 @@
                     flashInvalidWord();
                 }
             } else {
-                // Add the word to found words
+                // Add new word
                 flashValidWord(() => {
                     state.foundWords.push(word);
                     state.wordScores[word] = score;
