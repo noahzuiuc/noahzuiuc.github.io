@@ -172,11 +172,11 @@
         }
         
         #game-info {
-            display: flex;
+            display: none; /* Hide initially */
             flex-direction: column;
-            flex: 1 1 auto; /* Changed from 0 1 auto to allow growing */
+            flex: 1 1 auto;
             overflow: hidden;
-            max-height: 40vh; /* Increased from 30vh to 40vh */
+            max-height: 40vh;
         }
         
         #word-list-container {
@@ -622,10 +622,10 @@
                     else if (isSpecialTile(i, j, 'tripleWord')) {
                         cell.classList.add('triple-word');
                         const bonusLabel = document.createElement('span');
-                        bonusLabel.className = 'bonus-label';
+                        bonusLabel.className = 'bonus-label';  // Add this line to fix the positioning
                         bonusLabel.textContent = 'TW';
                         cell.appendChild(bonusLabel);
-                    } 
+                    }
                     // Check if this cell is a double letter tile 
                     else if (isSpecialTile(i, j, 'doubleLetter')) {
                         cell.classList.add('double-letter');
@@ -716,10 +716,8 @@
             }, { passive: false });
             
             boardElement.addEventListener('touchend', () => {
-                // Only auto-submit if the user was dragging (touchMoved) and has enough letters
-                if (state.gameActive && touchMoved && state.selectedCells.length >= 3) {
-                    // Force the word submission to happen after a short delay
-                    // This ensures proper touch event handling
+                // Only auto-submit if the user was dragging and has selected at least 2 letters
+                if (state.gameActive && touchMoved && state.selectedCells.length >= 2) {
                     setTimeout(() => {
                         submitWord();
                     }, 50);
@@ -880,13 +878,16 @@
             // Hide instructions
             document.getElementById('instructions').style.display = 'none';
             
+            // Show game info
+            document.getElementById('game-info').style.display = 'flex';
+            
             // Reset game state
             state.selectedCells = [];
             state.foundWords = [];
             state.wordScores = {};
             state.gameActive = true;
-            state.startTime = new Date();  // Add this line
-            state.endTime = null;          // Add this line
+            state.startTime = new Date();
+            state.endTime = null;
             
             // Update UI
             wordListElement.innerHTML = '';
@@ -1198,10 +1199,11 @@
             }
         });
 
-        // Update the mouse up handler for 2-letter words
         document.addEventListener('mouseup', () => {
-            if (state.gameActive && isDragging && state.selectedCells.length >= 2) {  // Changed from 3 to 2
-                submitWord();
+            if (state.gameActive && isDragging && state.selectedCells.length >= 2) {
+                setTimeout(() => {
+                    submitWord();
+                }, 50);
             }
             isDragging = false;
         });
