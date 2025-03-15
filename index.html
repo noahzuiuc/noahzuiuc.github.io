@@ -589,16 +589,15 @@
                 for (let j = 0; j < 5; j++) {
                     const cell = document.createElement('div');
                     cell.className = 'cell';
-                    cell.setAttribute('spellcheck', 'false');  // Add this line
+                    cell.setAttribute('spellcheck', 'false');
                     const letter = state.board[i][j];
                     
                     if (letter === 'Qu') {
                         cell.classList.add('qu');
-                        // Create a span to hold the Qu text
                         const quSpan = document.createElement('span');
                         quSpan.className = 'qu-text';
                         quSpan.textContent = 'Qu';
-                        quSpan.setAttribute('spellcheck', 'false');  // Add this line
+                        quSpan.setAttribute('spellcheck', 'false');
                         cell.appendChild(quSpan);
                     } else {
                         cell.textContent = letter;
@@ -610,32 +609,26 @@
                     scoreSpan.textContent = state.letterScores[i][j];
                     cell.appendChild(scoreSpan);
                     
-                    // Check if this cell is a double word tile
+                    // Add bonus tile labels
                     if (isSpecialTile(i, j, 'doubleWord')) {
                         cell.classList.add('double-word');
                         const bonusLabel = document.createElement('span');
                         bonusLabel.className = 'bonus-label';
                         bonusLabel.textContent = 'DW';
                         cell.appendChild(bonusLabel);
-                    } 
-                    // Check if this cell is a triple word tile
-                    else if (isSpecialTile(i, j, 'tripleWord')) {
+                    } else if (isSpecialTile(i, j, 'tripleWord')) {
                         cell.classList.add('triple-word');
                         const bonusLabel = document.createElement('span');
-                        bonusLabel.className = 'bonus-label';  // Add this line to fix the positioning
+                        bonusLabel.className = 'bonus-label';
                         bonusLabel.textContent = 'TW';
                         cell.appendChild(bonusLabel);
-                    }
-                    // Check if this cell is a double letter tile 
-                    else if (isSpecialTile(i, j, 'doubleLetter')) {
+                    } else if (isSpecialTile(i, j, 'doubleLetter')) {
                         cell.classList.add('double-letter');
                         const bonusLabel = document.createElement('span');
                         bonusLabel.className = 'letter-bonus-label';
                         bonusLabel.textContent = 'DL';
                         cell.appendChild(bonusLabel);
-                    }
-                    // Check if this cell is a triple letter tile
-                    else if (isSpecialTile(i, j, 'tripleLetter')) {
+                    } else if (isSpecialTile(i, j, 'tripleLetter')) {
                         cell.classList.add('triple-letter');
                         const bonusLabel = document.createElement('span');
                         bonusLabel.className = 'letter-bonus-label';
@@ -646,141 +639,32 @@
                     cell.dataset.row = i;
                     cell.dataset.col = j;
                     
-                    // Click event for mouse/taps
-                    cell.addEventListener('click', (e) => {
-                        if (!state.gameActive) return;
-                        // Skip if this was just touched or had a mousedown
-                        if (cell.dataset.recentTouch === 'true' || cell.dataset.recentMousedown === 'true') return;
-                        
-                        // Only handle click events if we're not in the middle of a touch interaction
-                        if (!touchActive) {
-                            toggleCellSelection(i, j);
-                        }
-                        e.preventDefault(); // Prevent any default behavior
-                    });
-                    
-                    // Touch events for swipe selection
-                    cell.addEventListener('touchstart', (e) => {
-                        if (!state.gameActive) return;
-                        touchActive = true;
-                        lastTouchedCell = {row: i, col: j};
-                        toggleCellSelection(i, j);
-                        e.preventDefault(); // Prevent default to avoid click event firing too
-                        
-                        // Set a flag to prevent the click event from processing
-                        cell.dataset.recentTouch = 'true';
-                        setTimeout(() => {
-                            cell.dataset.recentTouch = 'false';
-                        }, 300); // Clear after 300ms
-                    }, { passive: false });
-                    
                     boardElement.appendChild(cell);
                 }
             }
             
-            // Add touch end event listener to the board
-            boardElement.addEventListener('touchend', () => {
-                touchActive = false;
-                lastTouchedCell = null;
-            });
-            
-            boardElement.addEventListener('touchcancel', () => {
-                touchActive = false;
-                lastTouchedCell = null;
-            });
+            // Add single click handler to the board element instead of individual cells
+            boardElement.addEventListener('click', handleCellClick);
+        }
 
-            // Update touchend event listener with better drag detection
-            let touchMoved = false;
-            let touchStartX = 0;
-            let touchStartY = 0;
-            const TOUCH_MOVEMENT_THRESHOLD = 10; // Pixels required to consider it a drag
+        // Add this function to handle cell clicks
+        function handleCellClick(e) {
+            if (!state.gameActive) return;
             
-            boardElement.addEventListener('touchstart', (e) => {
-                touchMoved = false;
-                if (e.touches && e.touches[0]) {
-                    touchStartX = e.touches[0].clientX;
-                    touchStartY = e.touches[0].clientY;
-                }
-            }, { passive: true });
+            const cell = e.target.closest('.cell');
+            if (!cell) return;
             
-            boardElement.addEventListener('touchmove', (e) => {
-                if (e.touches && e.touches[0]) {
-                    const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
-                    const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
-                    
-                    // Only consider it a move if it exceeds our threshold
-                    if (deltaX > TOUCH_MOVEMENT_THRESHOLD || deltaY > TOUCH_MOVEMENT_THRESHOLD) {
-                        touchMoved = true;
-                    }
-                }
-            }, { passive: false });
+            // Skip if this was just touched or had a mousedown
+            if (cell.dataset.recentTouch === 'true' || cell.dataset.recentMousedown === 'true') return;
             
-            boardElement.addEventListener('touchend', () => {
-                // Only auto-submit if the user was dragging and has selected at least 2 letters
-                if (state.gameActive && touchMoved && state.selectedCells.length >= 2) {
-                    setTimeout(() => {
-                        submitWord();
-                    }, 50);
-                }
-                touchActive = false;
-                lastTouchedCell = null;
-            });
-
-            // Add touchmove event listener to the board
-            boardElement.addEventListener('touchmove', (e) => {
-                if (!state.gameActive || !touchActive) return;
-                const touch = e.touches[0];
-                
-                // Get all cell elements
-                const cells = document.querySelectorAll('.cell');
-                let closestCell = null;
-                let minDistance = Infinity;
-                
-                // Get average cell size to create a dynamic threshold
-                const sampleCell = cells[0];
-                const cellRect = sampleCell.getBoundingClientRect();
-                const cellSize = (cellRect.width + cellRect.height) / 2;
-                
-                // Set threshold to be ~40% of cell size (more precise touch required)
-                const MAX_DISTANCE_THRESHOLD = cellSize * 0.4;
-                
-                // Find the cell whose center is closest to the touch point
-                cells.forEach(cell => {
-                    const rect = cell.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    const centerY = rect.top + rect.height / 2;
-                    
-                    // Calculate distance from touch to cell center
-                    const distance = Math.sqrt(
-                        Math.pow(touch.clientX - centerX, 2) + 
-                        Math.pow(touch.clientY - centerY, 2)
-                    );
-                    
-                    // Update closest cell if this one is closer
-                    if (distance < minDistance && distance < MAX_DISTANCE_THRESHOLD) {
-                        minDistance = distance;
-                        closestCell = cell;
-                    }
-                });
-                
-                // If we found a close enough cell
-                if (closestCell) {
-                    const row = parseInt(closestCell.dataset.row);
-                    const col = parseInt(closestCell.dataset.col);
-                    
-                    // Make sure we're not on the same cell as last time
-                    if (lastTouchedCell && (lastTouchedCell.row !== row || lastTouchedCell.col !== col)) {
-                        // Check if adjacent to last selected cell before selecting
-                        if (isAdjacentToLastSelected(row, col)) {
-                            lastTouchedCell = {row, col};
-                            toggleCellSelection(row, col);
-                        }
-                    }
-                }
-                
-                e.preventDefault(); // Prevent scrolling while dragging
-            }, { passive: false });
-        } // Add this closing brace
+            // Only handle click events if we're not in the middle of a touch interaction
+            if (!touchActive) {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                toggleCellSelection(row, col);
+            }
+            e.preventDefault();
+        }
 
         // Rest of the functions should be outside renderBoard
         function isSpecialTile(row, col, tileType) {
@@ -1263,6 +1147,93 @@
                 clearSelection();
             }, 100);
         }
+
+        // Add these event listeners once when the page loads
+        boardElement.addEventListener('touchend', () => {
+            touchActive = false;
+            lastTouchedCell = null;
+        });
+
+        boardElement.addEventListener('touchcancel', () => {
+            touchActive = false;
+            lastTouchedCell = null;
+        });
+
+        // Touch event handling
+        let touchMoved = false;
+        let touchStartX = 0;
+        let touchStartY = 0;
+        const TOUCH_MOVEMENT_THRESHOLD = 10;
+
+        boardElement.addEventListener('touchstart', (e) => {
+            if (!state.gameActive) return;
+            touchMoved = false;
+            if (e.touches && e.touches[0]) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        boardElement.addEventListener('touchmove', (e) => {
+            if (!state.gameActive || !touchActive) return;
+            if (e.touches && e.touches[0]) {
+                const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
+                const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
+                
+                if (deltaX > TOUCH_MOVEMENT_THRESHOLD || deltaY > TOUCH_MOVEMENT_THRESHOLD) {
+                    touchMoved = true;
+                }
+            }
+            
+            const touch = e.touches[0];
+            const cells = document.querySelectorAll('.cell');
+            let closestCell = null;
+            let minDistance = Infinity;
+            
+            const sampleCell = cells[0];
+            const cellRect = sampleCell.getBoundingClientRect();
+            const cellSize = (cellRect.width + cellRect.height) / 2;
+            const MAX_DISTANCE_THRESHOLD = cellSize * 0.4;
+            
+            cells.forEach(cell => {
+                const rect = cell.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const distance = Math.sqrt(
+                    Math.pow(touch.clientX - centerX, 2) + 
+                    Math.pow(touch.clientY - centerY, 2)
+                );
+                
+                if (distance < minDistance && distance < MAX_DISTANCE_THRESHOLD) {
+                    minDistance = distance;
+                    closestCell = cell;
+                }
+            });
+            
+            if (closestCell) {
+                const row = parseInt(closestCell.dataset.row);
+                const col = parseInt(closestCell.dataset.col);
+                
+                if (lastTouchedCell && (lastTouchedCell.row !== row || lastTouchedCell.col !== col)) {
+                    if (isAdjacentToLastSelected(row, col)) {
+                        lastTouchedCell = {row, col};
+                        toggleCellSelection(row, col);
+                    }
+                }
+            }
+            
+            e.preventDefault();
+        }, { passive: false });
+
+        boardElement.addEventListener('touchend', () => {
+            if (state.gameActive && touchMoved && state.selectedCells.length >= 2) {
+                setTimeout(() => {
+                    submitWord();
+                }, 50);
+            }
+            touchActive = false;
+            lastTouchedCell = null;
+        });
     </script>
 </body>
 </html>
