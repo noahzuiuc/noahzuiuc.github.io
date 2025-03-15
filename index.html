@@ -171,13 +171,6 @@
             cursor: not-allowed;
         }
         
-        #time-remaining {
-            font-size: clamp(16px, 4vw, 20px);
-            font-weight: bold;
-            margin: 5px 0;
-            color: #f0f0f0;
-        }
-        
         #game-info {
             display: flex;
             flex-direction: column;
@@ -390,8 +383,6 @@
 <body>    
     <div id="game-container">
         <div id="game-top">
-            <div id="time-remaining">Time: 3:00</div>
-            <div id="time-elapsed">Time: 0:00</div>
             
             <div id="instructions" class="game-section">
                 <h3>How to Play:</h3>
@@ -460,10 +451,10 @@
             selectedCells: [],
             foundWords: [],
             wordScores: {}, // Store word scores for checking higher scoring versions
-            timeRemaining: 180,
             gameActive: false,
-            timer: null,
-            targetScore: 150
+            targetScore: 150,
+            startTime: null,     // Add this line to track when game starts
+            endTime: null       // Add this line to track when game ends
         };
         
         // DOM elements
@@ -471,7 +462,6 @@
         const currentWordElement = document.getElementById('current-word');
         const wordScoreElement = document.getElementById('word-score');
         const wordListElement = document.getElementById('word-list');
-        const timeRemainingElement = document.getElementById('time-elapsed'); // Update this ID if you change it in HTML
         const wordCountElement = document.getElementById('word-count');
         const scoreElement = document.getElementById('score');
         const startButton = document.getElementById('start-btn');
@@ -877,15 +867,14 @@
             state.selectedCells = [];
             state.foundWords = [];
             state.wordScores = {};
-            state.startTime = new Date();
-            state.elapsedSeconds = 0;
             state.gameActive = true;
+            state.startTime = new Date();  // Add this line
+            state.endTime = null;          // Add this line
             
             // Update UI
             wordListElement.innerHTML = '';
             wordCountElement.textContent = '0';
             scoreElement.textContent = '0';
-            timeRemainingElement.textContent = 'Time: 0:00';
             currentWordElement.textContent = '';
             wordScoreElement.textContent = '';
             notificationElement.textContent = '';
@@ -898,24 +887,12 @@
             startButton.disabled = true;
             submitButton.disabled = false;
             clearButton.disabled = false;
-            
-            // Start timer to track elapsed time
-            state.timer = setInterval(updateTimer, 1000);
-        }
-        
-        // Update the timer to track elapsed time
-        function updateTimer() {
-            state.elapsedSeconds++;
-            
-            const minutes = Math.floor(state.elapsedSeconds / 60);
-            const seconds = state.elapsedSeconds % 60;
-            timeRemainingElement.textContent = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
         
         // End the game
         function endGame(playerWon = false) {
             state.gameActive = false;
-            clearInterval(state.timer);
+            state.endTime = new Date();    // Add this line
             
             // Update button states
             startButton.disabled = false;
@@ -929,10 +906,18 @@
             wordScoreElement.textContent = '';
             
             if (playerWon) {
+                // Calculate time taken
+                const timeTaken = (state.endTime - state.startTime) / 1000; // Convert to seconds
+                const minutes = Math.floor(timeTaken / 60);
+                const seconds = Math.floor(timeTaken % 60);
+                
+                // Format time string
+                const timeString = minutes > 0 
+                    ? `${minutes}m ${seconds}s`
+                    : `${seconds} seconds`;
+                    
                 // Show victory message with time
-                const minutes = Math.floor(state.elapsedSeconds / 60);
-                const seconds = state.elapsedSeconds % 60;
-                timeRemainingElement.textContent = `Victory! Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                showNotification(`Victory! Time taken: ${timeString}`, 50000);
             }
         }
         
