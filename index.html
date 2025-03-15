@@ -408,7 +408,7 @@
                     <li><span class="bonus-tag dl-tag">DL</span> Double Letter | <span class="bonus-tag tl-tag">TL</span> Triple Letter</li>
                     <li><span class="bonus-tag dw-tag">DW</span> Double Word | <span class="bonus-tag tw-tag">TW</span> Triple Word</li>
                     <li style="margin-top: 50px;">Reach 150 points as fast as you can!</li>
-                    <li style="margin-top: 50px;">v0.1</li>
+                    <li style="margin-top: 50px;">v0.2</li>
                 </ul>
             </div>
             
@@ -1169,15 +1169,34 @@
 
         boardElement.addEventListener('touchstart', (e) => {
             if (!state.gameActive) return;
+            
+            touchActive = true;
             touchMoved = false;
+            
             if (e.touches && e.touches[0]) {
                 touchStartX = e.touches[0].clientX;
                 touchStartY = e.touches[0].clientY;
+                
+                // Handle initial cell selection
+                const touch = e.touches[0];
+                const cell = document.elementFromPoint(touch.clientX, touch.clientY);
+                
+                if (cell && cell.classList.contains('cell')) {
+                    const row = parseInt(cell.dataset.row);
+                    const col = parseInt(cell.dataset.col);
+                    
+                    clearSelection();
+                    lastTouchedCell = { row, col };
+                    toggleCellSelection(row, col);
+                }
             }
-        }, { passive: true });
+            
+            e.preventDefault();
+        }, { passive: false });
 
         boardElement.addEventListener('touchmove', (e) => {
             if (!state.gameActive || !touchActive) return;
+            
             if (e.touches && e.touches[0]) {
                 const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
                 const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
@@ -1185,41 +1204,19 @@
                 if (deltaX > TOUCH_MOVEMENT_THRESHOLD || deltaY > TOUCH_MOVEMENT_THRESHOLD) {
                     touchMoved = true;
                 }
-            }
-            
-            const touch = e.touches[0];
-            const cells = document.querySelectorAll('.cell');
-            let closestCell = null;
-            let minDistance = Infinity;
-            
-            const sampleCell = cells[0];
-            const cellRect = sampleCell.getBoundingClientRect();
-            const cellSize = (cellRect.width + cellRect.height) / 2;
-            const MAX_DISTANCE_THRESHOLD = cellSize * 0.4;
-            
-            cells.forEach(cell => {
-                const rect = cell.getBoundingClientRect();
-                const centerX = rect.left + rect.width / 2;
-                const centerY = rect.top + rect.height / 2;
-                const distance = Math.sqrt(
-                    Math.pow(touch.clientX - centerX, 2) + 
-                    Math.pow(touch.clientY - centerY, 2)
-                );
                 
-                if (distance < minDistance && distance < MAX_DISTANCE_THRESHOLD) {
-                    minDistance = distance;
-                    closestCell = cell;
-                }
-            });
-            
-            if (closestCell) {
-                const row = parseInt(closestCell.dataset.row);
-                const col = parseInt(closestCell.dataset.col);
+                const touch = e.touches[0];
+                const element = document.elementFromPoint(touch.clientX, touch.clientY);
                 
-                if (lastTouchedCell && (lastTouchedCell.row !== row || lastTouchedCell.col !== col)) {
-                    if (isAdjacentToLastSelected(row, col)) {
-                        lastTouchedCell = {row, col};
-                        toggleCellSelection(row, col);
+                if (element && element.classList.contains('cell')) {
+                    const row = parseInt(element.dataset.row);
+                    const col = parseInt(element.dataset.col);
+                    
+                    if (!lastTouchedCell || lastTouchedCell.row !== row || lastTouchedCell.col !== col) {
+                        if (isAdjacentToLastSelected(row, col)) {
+                            lastTouchedCell = { row, col };
+                            toggleCellSelection(row, col);
+                        }
                     }
                 }
             }
@@ -1227,7 +1224,7 @@
             e.preventDefault();
         }, { passive: false });
 
-        boardElement.addEventListener('touchend', () => {
+        boardElement.addEventListener('touchend', (e) => {
             if (state.gameActive && touchMoved && state.selectedCells.length >= 2) {
                 setTimeout(() => {
                     submitWord();
@@ -1235,7 +1232,14 @@
             }
             touchActive = false;
             lastTouchedCell = null;
-        });
+            e.preventDefault();
+        }, { passive: false });
+
+        boardElement.addEventListener('touchcancel', (e) => {
+            touchActive = false;
+            lastTouchedCell = null;
+            e.preventDefault();
+        }, { passive: false });
     </script>
 </body>
 </html>
